@@ -3,8 +3,9 @@ import type { RuntimeHandler, HandlerType, ToolInput, ToolConfig, ExecutionConte
 /**
  * Handles `text_generation` tool requests.
  *
- * Calls the AI Gateway's `/v1/chat/completions` endpoint, applying an optional
- * Mustache-style prompt template (`{{variable}}`) before dispatching.
+ * Routes through the AIOS AI Gateway when it is reachable, or falls back to
+ * calling OpenAI directly using OPENAI_API_KEY (useful when only the API
+ * service is running locally during development).
  */
 export class TextGenerationHandler implements RuntimeHandler {
   readonly type: HandlerType = "text_generation";
@@ -12,14 +13,37 @@ export class TextGenerationHandler implements RuntimeHandler {
 
   constructor(private readonly gatewayUrl: string) {}
 
-  async execute(input: ToolInput, config: ToolConfig, _context: ExecutionContext): Promise<ToolOutput> {
+  /**
+   * Returns { url, headers } for the AI Gateway completions call.
+   * All requests are routed through the AI Gateway — no direct provider fallback.
+   */
+  private resolveEndpoint(context: ExecutionContext): { url: string; headers: Record<string, string> } {
+    const gatewayToken = process.env["INTERNAL_GATEWAY_TOKEN"];
+    if (!gatewayToken) {
+      throw new Error("INTERNAL_GATEWAY_TOKEN is required for AI Gateway communication");
+    }
+
+    return {
+      url: `${this.gatewayUrl}/v1/chat/completions`,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${gatewayToken}`,
+        "x-user-id": context.userId,
+        "x-org-id": context.organizationId,
+      },
+    };
+  }
+
+  async execute(input: ToolInput, config: ToolConfig, context: ExecutionContext): Promise<ToolOutput> {
     const startTime = Date.now();
-    const model = input.model ?? config.defaultModel;
+    const model = input.model ?? "gpt-4o";
     const prompt = this.buildPrompt(config.promptTemplate, input.parameters);
 
-    const response = await fetch(`${this.gatewayUrl}/v1/chat/completions`, {
+    const { url, headers } = this.resolveEndpoint(context);
+
+    const response = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         model,
         messages: [
@@ -31,7 +55,8 @@ export class TextGenerationHandler implements RuntimeHandler {
     });
 
     if (!response.ok) {
-      throw new Error(`AI Gateway error (${response.status}): ${response.statusText}`);
+      const body = await response.text().catch(() => response.statusText);
+      throw new Error(`Text generation error (${response.status}): ${body}`);
     }
 
     const data = (await response.json()) as {

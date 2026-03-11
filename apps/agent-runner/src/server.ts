@@ -122,7 +122,7 @@ const agentWorker = new Worker(
         toolId: tool.id,
         name: tool.name,
         handlerType: tool.handlerType as ToolConfig["handlerType"],
-        defaultModel: tool.defaultModel ?? "gpt-4o",
+        modelId: "gpt-4o",
         inputSchema: (tool.inputSchema as Record<string, unknown>) ?? {},
         outputType: tool.outputType as ToolConfig["outputType"],
         promptTemplate: tool.promptTemplate ?? undefined,
@@ -137,7 +137,7 @@ const agentWorker = new Worker(
       userId: userId ?? "system",
       workspaceId,
       organizationId: organizationId ?? "",
-      creditsAvailable: creditsAvailable ?? (organizationId ? await walletService.getBalance(organizationId) : 9999),
+      creditsAvailable: creditsAvailable ?? (organizationId ? await walletService.getBalance(organizationId) : 0),
     };
 
     const agentConfig = {

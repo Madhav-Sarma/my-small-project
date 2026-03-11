@@ -42,12 +42,12 @@ async function main() {
 
   // ── Sample Tools ────────────────────────────────────
   const sampleTools = [
-    { slug: "blog-generator", name: "Blog Generator", category: "writing", handlerType: "text_generation" as const, defaultModel: "gpt-4", inputSchema: { topic: "string", tone: "string", length: "string" }, outputType: "text_document" as const, promptTemplate: "Write a blog post about {{topic}} in {{tone}} tone. Length: {{length}}.", pricingCredits: 10, isBuiltIn: true },
-    { slug: "essay-generator", name: "Essay Generator", category: "writing", handlerType: "text_generation" as const, defaultModel: "gpt-4", inputSchema: { topic: "string", style: "string" }, outputType: "text_document" as const, promptTemplate: "Write an essay about {{topic}} in {{style}} style.", pricingCredits: 12, isBuiltIn: true },
-    { slug: "code-generator", name: "Code Generator", category: "development", handlerType: "code_generation" as const, defaultModel: "gpt-4", inputSchema: { description: "string", language: "string" }, outputType: "code_project" as const, promptTemplate: "Generate {{language}} code: {{description}}", pricingCredits: 15, isBuiltIn: true },
-    { slug: "image-generator", name: "Image Generator", category: "design", handlerType: "image_generation" as const, defaultModel: "dall-e-3", inputSchema: { prompt: "string", style: "string", size: "string" }, outputType: "editable_image" as const, pricingCredits: 20, isBuiltIn: true },
-    { slug: "seo-optimizer", name: "SEO Optimizer", category: "marketing", handlerType: "text_generation" as const, defaultModel: "gpt-4", inputSchema: { content: "string", keywords: "string" }, outputType: "text_document" as const, promptTemplate: "Optimize the following content for SEO with keywords {{keywords}}: {{content}}", pricingCredits: 8, isBuiltIn: true },
-    { slug: "email-writer", name: "Email Writer", category: "writing", handlerType: "text_generation" as const, defaultModel: "gpt-4", inputSchema: { subject: "string", context: "string" }, outputType: "text_document" as const, promptTemplate: "Write a professional email regarding {{subject}}. Context: {{context}}", pricingCredits: 6, isBuiltIn: true },
+    { slug: "blog-generator", name: "Blog Generator", category: "writing", handlerType: "text_generation" as const, inputSchema: { type: "object", properties: { topic: { type: "string" }, tone: { type: "string", enum: ["professional", "casual", "academic"], default: "professional" }, length: { type: "number", default: 800 } }, required: ["topic"] }, outputType: "text_document" as const, promptTemplate: "Write a {{tone}} blog post about '{{topic}}' that is approximately {{length}} words long.\n\nRequirements:\n- Engaging, well-structured content with clear sections\n- SEO-friendly headings\n- Conversational yet informative tone\n- Include a compelling introduction and strong conclusion", pricingCredits: 10, apiProvider: "openai", isBuiltIn: true },
+    { slug: "essay-generator", name: "Essay Generator", category: "writing", handlerType: "text_generation" as const, inputSchema: { type: "object", properties: { topic: { type: "string" }, style: { type: "string" } }, required: ["topic"] }, outputType: "text_document" as const, promptTemplate: "Write an essay about {{topic}} in {{style}} style.", pricingCredits: 12, apiProvider: "openai", isBuiltIn: true },
+    { slug: "code-generator", name: "Code Generator", category: "development", handlerType: "code_generation" as const, inputSchema: { type: "object", properties: { description: { type: "string" }, language: { type: "string" } }, required: ["description"] }, outputType: "code_project" as const, promptTemplate: "Generate {{language}} code: {{description}}", pricingCredits: 15, apiProvider: "openai", isBuiltIn: true },
+    { slug: "image-generator", name: "Image Generator", category: "design", handlerType: "image_generation" as const, inputSchema: { type: "object", properties: { prompt: { type: "string" }, style: { type: "string" }, size: { type: "string" } }, required: ["prompt"] }, outputType: "editable_image" as const, pricingCredits: 20, apiProvider: "openai", isBuiltIn: true },
+    { slug: "seo-optimizer", name: "SEO Optimizer", category: "marketing", handlerType: "text_generation" as const, inputSchema: { type: "object", properties: { content: { type: "string" }, keywords: { type: "string" } }, required: ["content"] }, outputType: "text_document" as const, promptTemplate: "Optimize the following content for SEO with keywords {{keywords}}: {{content}}", pricingCredits: 8, apiProvider: "openai", isBuiltIn: true },
+    { slug: "email-writer", name: "Email Writer", category: "writing", handlerType: "text_generation" as const, inputSchema: { type: "object", properties: { subject: { type: "string" }, context: { type: "string" } }, required: ["subject"] }, outputType: "text_document" as const, promptTemplate: "Write a professional email regarding {{subject}}. Context: {{context}}", pricingCredits: 6, apiProvider: "openai", isBuiltIn: true },
   ];
 
   for (const t of sampleTools) {
@@ -126,6 +126,29 @@ async function main() {
       where: { slug: c.slug },
       update: {},
       create: c,
+    });
+  }
+
+  // ── AI Models (Dynamic Registry) ─────────────────────
+  const aiModels = [
+    // OpenAI
+    { provider: "openai", modelName: "gpt-4o", displayName: "GPT-4o", category: "text", description: "Most capable model, best for complex reasoning", contextWindow: 128000, maxOutputTokens: 4096, inputCostPer1kTokens: 0.005, outputCostPer1kTokens: 0.015 },
+    { provider: "openai", modelName: "gpt-4o-mini", displayName: "GPT-4o Mini", category: "text", description: "Fast and efficient model for general tasks", contextWindow: 128000, maxOutputTokens: 4096, inputCostPer1kTokens: 0.00015, outputCostPer1kTokens: 0.0006 },
+    { provider: "openai", modelName: "gpt-3.5-turbo", displayName: "GPT-3.5 Turbo", category: "text", description: "Cost-effective model for most tasks", contextWindow: 4096, maxOutputTokens: 2048, inputCostPer1kTokens: 0.0005, outputCostPer1kTokens: 0.0015 },
+    { provider: "openai", modelName: "dall-e-3", displayName: "DALL-E 3", category: "image", description: "Generate high-quality images from text", contextWindow: 0, maxOutputTokens: 0, inputCostPer1kTokens: 0.08, outputCostPer1kTokens: 0 },
+    // Anthropic
+    { provider: "anthropic", modelName: "claude-sonnet-4-20250514", displayName: "Claude Sonnet", category: "text", description: "Balanced model for quality and speed", contextWindow: 200000, maxOutputTokens: 4096, inputCostPer1kTokens: 0.003, outputCostPer1kTokens: 0.015 },
+    { provider: "anthropic", modelName: "claude-haiku-3-5-20241022", displayName: "Claude Haiku", category: "text", description: "Fast and compact model for simple tasks", contextWindow: 200000, maxOutputTokens: 1024, inputCostPer1kTokens: 0.0008, outputCostPer1kTokens: 0.0024 },
+    // Google
+    { provider: "google", modelName: "gemini-pro", displayName: "Gemini Pro", category: "text", description: "Reliable standard model from Google", contextWindow: 32000, maxOutputTokens: 8192, inputCostPer1kTokens: 0.00025, outputCostPer1kTokens: 0.0005 },
+    { provider: "google", modelName: "gemini-2.0-flash", displayName: "Gemini 2.0 Flash", category: "text", description: "Latest ultra-fast model with superior performance", contextWindow: 1000000, maxOutputTokens: 8192, inputCostPer1kTokens: 0.00075, outputCostPer1kTokens: 0.003 },
+  ];
+
+  for (const m of aiModels) {
+    await prisma.aIModel.upsert({
+      where: { provider_modelName: { provider: m.provider, modelName: m.modelName } },
+      update: { displayName: m.displayName, inputCostPer1kTokens: m.inputCostPer1kTokens, outputCostPer1kTokens: m.outputCostPer1kTokens },
+      create: { ...m, enabled: true, deprecated: false },
     });
   }
 

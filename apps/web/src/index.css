@@ -1,10 +1,147 @@
 @import "tailwindcss";
 
-/* Custom theme tokens */
+/* ─── Light / Dark theme tokens ─────────────────────────────────────────────── */
+:root {
+  --page-bg: #ffffff;
+  --surface: #f8fafc;
+  --card: #ffffff;
+  --card-hover: #f9fafb;
+  --overlay: rgba(0, 0, 0, 0.5);
+  --panel: #ffffff;
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --text-inverted: #ffffff;
+
+  --border: rgba(0, 0, 0, 0.08);
+  --border-hover: rgba(0, 0, 0, 0.15);
+  --border-active: rgba(99, 102, 241, 0.5);
+
+  --input-bg: #f1f5f9;
+  --input-text: #0f172a;
+  --input-placeholder: #94a3b8;
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-elevated: 0 10px 40px 5px rgba(194, 194, 194, 0.25);
+  --shadow-glow-indigo: 0 0 20px rgba(99, 102, 241, 0.15);
+  --shadow-glow-cyan: 0 0 20px rgba(6, 182, 212, 0.15);
+
+  --accent-muted-bg: rgba(99, 102, 241, 0.08);
+  --accent-muted-text: #4f46e5;
+  --accent-cyan-bg: rgba(6, 182, 212, 0.08);
+  --accent-cyan-text: #0891b2;
+  --accent-violet-bg: rgba(139, 92, 246, 0.08);
+  --accent-violet-text: #7c3aed;
+  --accent-emerald-bg: rgba(16, 185, 129, 0.08);
+  --accent-emerald-text: #059669;
+  --accent-fuchsia-bg: rgba(217, 70, 239, 0.08);
+  --accent-fuchsia-text: #c026d3;
+
+  --status-active-bg: #dcfce7;
+  --status-active-text: #16a34a;
+
+  --kbd-bg: #e2e8f0;
+  --kbd-text: #64748b;
+
+  --divider: rgba(0, 0, 0, 0.06);
+  --hover-bg: rgba(0, 0, 0, 0.03);
+
+  --gradient-text-from: #4f46e5;
+  --gradient-text-via: #7c3aed;
+  --gradient-text-to: #c026d3;
+
+  --prose-mode: normal;
+}
+
+.dark {
+  --page-bg: #0a0a1a;
+  --surface: #0d0d1f;
+  --card: rgba(255, 255, 255, 0.05);
+  --card-hover: rgba(255, 255, 255, 0.08);
+  --overlay: rgba(0, 0, 0, 0.6);
+  --panel: #0d0d1f;
+
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --text-muted: rgba(255, 255, 255, 0.4);
+  --text-inverted: #0f172a;
+
+  --border: rgba(255, 255, 255, 0.1);
+  --border-hover: rgba(255, 255, 255, 0.2);
+  --border-active: rgba(99, 102, 241, 0.5);
+
+  --input-bg: rgba(255, 255, 255, 0.05);
+  --input-text: #ffffff;
+  --input-placeholder: rgba(255, 255, 255, 0.3);
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-elevated: 0 10px 40px 5px rgba(0, 0, 0, 0.4);
+  --shadow-glow-indigo: 0 0 20px rgba(99, 102, 241, 0.3);
+  --shadow-glow-cyan: 0 0 20px rgba(6, 182, 212, 0.3);
+
+  --accent-muted-bg: rgba(99, 102, 241, 0.2);
+  --accent-muted-text: #818cf8;
+  --accent-cyan-bg: rgba(6, 182, 212, 0.2);
+  --accent-cyan-text: #22d3ee;
+  --accent-violet-bg: rgba(139, 92, 246, 0.2);
+  --accent-violet-text: #a78bfa;
+  --accent-emerald-bg: rgba(16, 185, 129, 0.2);
+  --accent-emerald-text: #34d399;
+  --accent-fuchsia-bg: rgba(217, 70, 239, 0.2);
+  --accent-fuchsia-text: #e879f9;
+
+  --status-active-bg: rgba(16, 185, 129, 0.2);
+  --status-active-text: #34d399;
+
+  --kbd-bg: rgba(255, 255, 255, 0.1);
+  --kbd-text: rgba(255, 255, 255, 0.3);
+
+  --divider: rgba(255, 255, 255, 0.06);
+  --hover-bg: rgba(255, 255, 255, 0.05);
+
+  --gradient-text-from: #818cf8;
+  --gradient-text-via: #c084fc;
+  --gradient-text-to: #f0abfc;
+
+  --prose-mode: invert;
+}
+
+/* ─── Tailwind theme registration ───────────────────────────────────────────── */
 @theme {
-  --color-surface-dark: #0a0a1a;
-  --color-surface-card: #16163a;
-  --color-surface-glass: rgba(255, 255, 255, 0.05);
+  --color-page: var(--page-bg);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-card-hover: var(--card-hover);
+  --color-overlay: var(--overlay);
+  --color-panel: var(--panel);
+
+  --color-t-primary: var(--text-primary);
+  --color-t-secondary: var(--text-secondary);
+  --color-t-muted: var(--text-muted);
+  --color-t-inverted: var(--text-inverted);
+
+  --color-border: var(--border);
+  --color-border-hover: var(--border-hover);
+  --color-border-active: var(--border-active);
+
+  --color-input: var(--input-bg);
+  --color-input-text: var(--input-text);
+  --color-input-placeholder: var(--input-placeholder);
+
+  --color-a-bg: var(--accent-muted-bg);
+  --color-a-text: var(--accent-muted-text);
+  --color-a-cyan-bg: var(--accent-cyan-bg);
+  --color-a-cyan-text: var(--accent-cyan-text);
+  --color-a-violet-bg: var(--accent-violet-bg);
+  --color-a-violet-text: var(--accent-violet-text);
+  --color-a-emerald-bg: var(--accent-emerald-bg);
+  --color-a-emerald-text: var(--accent-emerald-text);
+  --color-a-fuchsia-bg: var(--accent-fuchsia-bg);
+  --color-a-fuchsia-text: var(--accent-fuchsia-text);
+
+  --color-divider: var(--divider);
+  --color-hover: var(--hover-bg);
 
   --color-neural-start: #667eea;
   --color-neural-end: #764ba2;
@@ -15,18 +152,19 @@
   --color-accent-emerald: #10b981;
 }
 
-/* Glass morphism utilities */
+/* ─── Component utilities ───────────────────────────────────────────────────── */
 @layer components {
   .glass {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--card);
     backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-card);
   }
 
   .glass-heavy {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--card-hover);
     backdrop-filter: blur(32px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid var(--border-hover);
   }
 
   .neural-gradient {
@@ -34,17 +172,29 @@
   }
 
   .glow-indigo {
-    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+    box-shadow: var(--shadow-glow-indigo);
   }
 
   .glow-cyan {
-    box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+    box-shadow: var(--shadow-glow-cyan);
   }
 
   .text-gradient {
-    background: linear-gradient(135deg, #818cf8, #c084fc, #f0abfc);
+    background: linear-gradient(135deg, var(--gradient-text-from), var(--gradient-text-via), var(--gradient-text-to));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  /* Theme-aware card */
+  .theme-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-card);
+    border-radius: 1rem;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .theme-card:hover {
+    border-color: var(--border-hover);
   }
 }

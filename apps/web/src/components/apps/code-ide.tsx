@@ -8,10 +8,10 @@ const sampleFiles = [
 
 export function CodeIDE() {
   return (
-    <div className="flex h-full rounded-2xl border border-white/10 bg-white/5">
+    <div className="flex h-full rounded-2xl border border-border bg-card">
       {/* File tree */}
-      <div className="w-56 border-r border-white/10 p-3">
-        <div className="mb-2 flex items-center gap-2 px-2 text-xs font-medium text-white/40">
+      <div className="w-56 border-r border-border p-3">
+        <div className="mb-2 flex items-center gap-2 px-2 text-xs font-medium text-t-muted">
           <FolderTree className="h-3 w-3" /> FILES
         </div>
         {sampleFiles.map((file) => (
@@ -19,8 +19,8 @@ export function CodeIDE() {
             key={file.name}
             className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm ${
               file.active
-                ? "bg-indigo-500/15 text-indigo-400"
-                : "text-white/50 hover:bg-white/5"
+                ? "bg-a-bg text-a-text"
+                : "text-t-muted hover:bg-hover"
             }`}
           >
             <FileCode className="h-3.5 w-3.5" />
@@ -32,8 +32,8 @@ export function CodeIDE() {
       {/* Editor area — Monaco would mount here */}
       <div className="flex flex-1 flex-col">
         {/* Tabs */}
-        <div className="flex border-b border-white/10">
-          <div className="flex items-center gap-2 border-r border-white/10 bg-white/5 px-4 py-2 text-xs text-white/70">
+        <div className="flex border-b border-border">
+          <div className="flex items-center gap-2 border-r border-border bg-card px-4 py-2 text-xs text-t-secondary">
             <FileCode className="h-3 w-3" /> index.ts
           </div>
         </div>
@@ -50,8 +50,8 @@ export function CodeIDE() {
         </div>
 
         {/* Toolbar */}
-        <div className="flex items-center justify-between border-t border-white/10 px-4 py-1.5">
-          <div className="flex items-center gap-2 text-[11px] text-white/30">
+        <div className="flex items-center justify-between border-t border-border px-4 py-1.5">
+          <div className="flex items-center gap-2 text-[11px] text-t-muted">
             <span>TypeScript</span>
             <span>UTF-8</span>
             <span>Ln 1, Col 1</span>

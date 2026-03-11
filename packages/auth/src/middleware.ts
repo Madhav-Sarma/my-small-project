@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { verifyToken, type ClerkJWTPayload } from "./clerk.js";
 
 export interface AuthenticatedRequest extends Request {
   userId?: string;
@@ -6,18 +7,28 @@ export interface AuthenticatedRequest extends Request {
   role?: string;
 }
 
-export function authMiddleware(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
-  // Integration point for Clerk/Auth0
-  // In production, verify JWT and extract user claims
+/**
+ * Production authentication middleware.
+ * Verifies Clerk JWT and attaches user identity to the request.
+ * No development bypass — all requests must include a valid Bearer token.
+ */
+export async function authMiddleware(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
+
   if (!authHeader?.startsWith("Bearer ")) {
-    res.status(401).json({ error: "Unauthorized" });
+    res.status(401).json({ error: "Unauthorized: Missing or invalid token" });
     return;
   }
 
-  // Placeholder: extract from verified token
-  req.userId = req.headers["x-user-id"] as string;
-  req.organizationId = req.headers["x-org-id"] as string;
-  req.role = req.headers["x-role"] as string ?? "member";
-  next();
+  const token = authHeader.slice(7);
+
+  try {
+    const payload = await verifyToken(token);
+    req.userId = payload.sub;
+    req.organizationId = payload.org_id;
+    req.role = payload.org_role ?? "member";
+    next();
+  } catch (error) {
+    res.status(401).json({ error: "Unauthorized: Invalid or expired token" });
+  }
 }

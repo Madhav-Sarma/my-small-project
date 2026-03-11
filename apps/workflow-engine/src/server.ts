@@ -57,7 +57,7 @@ function createWorkflowExecutor(
         toolId: tool.id,
         name: tool.name,
         handlerType: tool.handlerType as Parameters<typeof toolEngine.execute>[0]["handlerType"],
-        defaultModel: tool.defaultModel ?? "gpt-4o",
+        modelId: "gpt-4o",
         inputSchema: (tool.inputSchema as Record<string, unknown>) ?? {},
         outputType: tool.outputType as Parameters<typeof toolEngine.execute>[0]["outputType"],
         promptTemplate: tool.promptTemplate ?? undefined,
@@ -68,7 +68,7 @@ function createWorkflowExecutor(
         userId,
         workspaceId,
         organizationId: String(context.variables["organizationId"] ?? ""),
-        creditsAvailable: Number(context.variables["creditsAvailable"] ?? 9999),
+        creditsAvailable: Number(context.variables["creditsAvailable"] ?? 0),
       };
 
       const result = await toolEngine.execute(

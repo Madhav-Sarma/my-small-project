@@ -35,6 +35,7 @@ model User {
   usageLogs               UsageLog[]
   agentExecutionLogs      AgentExecutionLog[]
   marketplaceReviews      MarketplaceReview[]
+  runRecords              ToolRunRecord[]
 
   @@map("users")
 }
@@ -53,15 +54,17 @@ model Organization {
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  members       OrganizationMember[]
-  wallet        OrganizationWallet?
-  subscription  OrganizationSubscription?
-  workspaces    Workspace[]
-  usageLogs     OrganizationUsageLog[]
-  creditWallet  CreditWallet?
-  creditTxns    CreditTransaction[]
-  subscriptions Subscription[]
-  billingUsage  UsageLog[]
+  members            OrganizationMember[]
+  wallet             OrganizationWallet?
+  subscription       OrganizationSubscription?
+  workspaces         Workspace[]
+  usageLogs          OrganizationUsageLog[]
+  creditWallet       CreditWallet?
+  creditTxns         CreditTransaction[]
+  subscriptions      Subscription[]
+  billingUsage       UsageLog[]
+  runRecords         ToolRunRecord[]
+  paymentOrders      PaymentOrder[]
 
   @@map("organizations")
 }
@@ -240,13 +243,12 @@ model Tool {
   category           String?
   iconUrl            String?     @map("icon_url")
   handlerType        HandlerType @map("handler_type")
-  defaultModel       String?     @map("default_model")
   inputSchema        Json        @map("input_schema")
   outputType         OutputType  @map("output_type")
   promptTemplate     String?     @map("prompt_template") @db.Text
   pricingCredits     Decimal     @default(10) @map("pricing_credits") @db.Decimal(8, 2)
   suitePricingCredits Decimal?   @default(7) @map("suite_pricing_credits") @db.Decimal(8, 2)
-  apiProvider        String?     @map("api_provider")
+  apiProvider        String?     @map("api_provider") // primary provider for this tool
   permissions        Json        @default("[]")
   status             ToolStatus  @default(published)
   isBuiltIn          Boolean     @default(false) @map("is_built_in")
@@ -262,6 +264,7 @@ model Tool {
   packTools          PackTool[]
   toolPricings       ToolPricing[]
   executionJobs      ToolExecutionJob[]
+  runRecords         ToolRunRecord[]
 
   @@map("tools")
 }
@@ -906,6 +909,103 @@ model ApiCost {
   effectiveFrom  DateTime @default(now()) @map("effective_from")
 
   @@map("api_costs")
+}
+
+// ═══════════════════════════════════════════════════════
+// AI MODELS (Dynamic Model Registry)
+// ═══════════════════════════════════════════════════════
+
+model AIModel {
+  id                    String    @id @default(uuid())
+  provider              String    // "openai", "anthropic", "google", etc.
+  modelName             String    @map("model_name")
+  displayName           String    @map("display_name")
+  category              String    // "text", "image", "video", "code", "embedding"
+  description           String?
+  contextWindow         Int?      @map("context_window")
+  maxOutputTokens       Int?      @map("max_output_tokens")
+  inputCostPer1kTokens  Decimal   @map("input_cost_per_1k_tokens") @db.Decimal(10, 8) // USD
+  outputCostPer1kTokens Decimal   @map("output_cost_per_1k_tokens") @db.Decimal(10, 8) // USD
+  enabled               Boolean   @default(true)
+  deprecated            Boolean   @default(false)
+  releaseDate           DateTime? @map("release_date")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  runRecords ToolRunRecord[]
+
+  @@unique([provider, modelName])
+  @@map("ai_models")
+}
+
+// ═══════════════════════════════════════════════════════
+// TOOL EXECUTION RECORDS (Cost & Result Tracking)
+// ═══════════════════════════════════════════════════════
+
+model ToolRunRecord {
+  id              String    @id @default(uuid())
+  toolId          String    @map("tool_id")
+  modelId         String    @map("model_id")
+  organizationId  String    @map("organization_id")
+  userId          String?   @map("user_id")
+  workspaceId     String?   @map("workspace_id")
+  status          String    // "pending", "running", "completed", "failed"
+  input           Json?
+  output          Json?
+  inputTokens     Int?      @map("input_tokens")
+  outputTokens    Int?      @map("output_tokens")
+  estimatedCost   Decimal?  @map("estimated_cost") @db.Decimal(10, 8)
+  actualCost      Decimal?  @map("actual_cost") @db.Decimal(10, 8)
+  creditsCharged  Decimal   @map("credits_charged") @db.Decimal(10, 4)
+  executionTimeMs Int?      @map("execution_time_ms")
+  errorMessage    String?   @map("error_message")
+  startedAt       DateTime  @default(now()) @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+
+  tool         Tool         @relation(fields: [toolId], references: [id])
+  model        AIModel      @relation(fields: [modelId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User?        @relation(fields: [userId], references: [id])
+
+  @@map("tool_run_records")
+}
+
+// ═══════════════════════════════════════════════════════
+// USER SETTINGS
+// ═══════════════════════════════════════════════════════
+
+model UserSettings {
+  id       String   @id @default(uuid())
+  userId   String   @unique @map("user_id")
+  heroView String   @default("view1") @map("hero_view") // "view1" or "view2"
+  theme    String   @default("light")
+  settings Json     @default("{}")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("user_settings")
+}
+
+// ═══════════════════════════════════════════════════════
+// BILLING: PAYMENT ORDERS (Razorpay)
+// ═══════════════════════════════════════════════════════
+
+model PaymentOrder {
+  id              String   @id @default(uuid())
+  organizationId  String   @map("organization_id")
+  razorpayOrderId String?  @unique @map("razorpay_order_id")
+  razorpayPaymentId String? @map("razorpay_payment_id")
+  credits         Int      // Number of credits to purchase
+  amountInPaisa   BigInt   @map("amount_in_paisa") // 100 paisa = 1 rupee
+  currency        String   @default("INR")
+  status          String   // "created", "paid", "failed", "cancelled"
+  notes           Json     @default("{}")
+  createdAt       DateTime @default(now()) @map("created_at")
+  paidAt          DateTime? @map("paid_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("payment_orders")
 }
 
 model UsageLog {

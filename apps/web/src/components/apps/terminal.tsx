@@ -2,9 +2,9 @@ import { TerminalSquare } from "lucide-react";
 
 export function TerminalApp() {
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-white/10 bg-[#0c0c1e]">
+    <div className="flex h-full flex-col rounded-2xl border border-border bg-[#0c0c1e] dark:bg-[#0c0c1e]">
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-white/10 px-4 py-2">
+      <div className="flex items-center gap-2 border-b border-border px-4 py-2">
         <TerminalSquare className="h-4 w-4 text-emerald-400" />
         <span className="text-sm text-white/60">Terminal</span>
         <div className="flex-1" />
@@ -33,7 +33,7 @@ export function TerminalApp() {
       </div>
 
       {/* Input */}
-      <div className="flex items-center border-t border-white/10 px-4 py-2">
+      <div className="flex items-center border-t border-border px-4 py-2">
         <span className="mr-2 text-sm text-emerald-400">$</span>
         <input
           type="text"

@@ -1,12 +1,19 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AIOS — AI Operating System for Work</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script>
+      // Prevent flash of wrong theme
+      (function(){var t=localStorage.getItem("aios-theme");if(t==="dark")document.documentElement.classList.add("dark")})();
+    </script>
   </head>
-  <body class="bg-[#0a0a1a] text-white antialiased">
+  <body class="bg-page text-t-primary antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

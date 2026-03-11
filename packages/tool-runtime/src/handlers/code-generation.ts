@@ -43,16 +43,34 @@ export class CodeGenerationHandler implements RuntimeHandler {
 
   constructor(private readonly gatewayUrl: string) {}
 
-  async execute(input: ToolInput, config: ToolConfig, _context: ExecutionContext): Promise<ToolOutput> {
+  private resolveEndpoint(context: ExecutionContext): { url: string; headers: Record<string, string> } {
+    const gatewayToken = process.env["INTERNAL_GATEWAY_TOKEN"];
+    if (!gatewayToken) {
+      throw new Error("INTERNAL_GATEWAY_TOKEN is required for AI Gateway communication");
+    }
+    return {
+      url: `${this.gatewayUrl}/v1/chat/completions`,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${gatewayToken}`,
+        "x-user-id": context.userId,
+        "x-org-id": context.organizationId,
+      },
+    };
+  }
+
+  async execute(input: ToolInput, config: ToolConfig, context: ExecutionContext): Promise<ToolOutput> {
     const startTime = Date.now();
-    const model = input.model ?? config.defaultModel;
+    const model = input.model ?? config.modelId;
     const language = String(input.parameters.language ?? "typescript");
     const filename = String(input.parameters.filename ?? `main.${getExtension(language)}`);
     const prompt = this.buildCodePrompt(config.promptTemplate, input.parameters, language);
 
-    const response = await fetch(`${this.gatewayUrl}/v1/chat/completions`, {
+    const { url, headers } = this.resolveEndpoint(context);
+
+    const response = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         model,
         messages: [

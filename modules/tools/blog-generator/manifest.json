@@ -7,8 +7,10 @@
   "author": "aios-team",
   "icon": "pen-tool",
   "category": "Content",
-  "handlerType": "PROMPT_CHAIN",
-  "outputType": "TEXT_DOCUMENT",
+  "handlerType": "text_generation",
+  "outputType": "text_document",
+  "modelId": "gpt-4o-mini",
+  "promptTemplate": "Write a {{tone}} blog post about '{{topic}}' that is approximately {{length}} words long.\n\nRequirements:\n- Engaging, well-structured content with clear sections\n- SEO-friendly headings\n- Conversational yet informative tone\n- Include a compelling introduction and strong conclusion",
   "inputSchema": {
     "type": "object",
     "properties": {

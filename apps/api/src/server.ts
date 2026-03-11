@@ -8,6 +8,7 @@ import { authMiddleware, createRateLimiter } from "@aios/auth";
 import { scanAndRegisterModules } from "@aios/plugin-system";
 import { toolsRouter } from "./routes/tools.js";
 import { suitesRouter } from "./routes/suites.js";
+import { modelsRouter } from "./routes/models.js";
 import { workspacesRouter } from "./routes/workspaces.js";
 import { organizationsRouter } from "./routes/organizations.js";
 import { marketplaceRouter } from "./routes/marketplace.js";
@@ -16,6 +17,8 @@ import { agentsRouter } from "./routes/agents.js";
 import { workflowsRouter } from "./routes/workflows.js";
 import { connectorsRouter } from "./routes/connectors.js";
 import { appsRouter } from "./routes/apps.js";
+import { settingsRouter } from "./routes/settings.js";
+import { usersRouter } from "./routes/users.js";
 
 const app = express();
 
@@ -41,6 +44,7 @@ app.use("/api/v1", authMiddleware, apiRateLimiter);
 
 // API routes
 app.use("/api/v1/tools", toolsRouter);
+app.use("/api/v1/models", modelsRouter);
 app.use("/api/v1/suites", suitesRouter);
 app.use("/api/v1/workspaces", workspacesRouter);
 app.use("/api/v1/organizations", organizationsRouter);
@@ -50,6 +54,8 @@ app.use("/api/v1/agents", agentsRouter);
 app.use("/api/v1/workflows", workflowsRouter);
 app.use("/api/v1/connectors", connectorsRouter);
 app.use("/api/v1/apps", appsRouter);
+app.use("/api/v1/settings", settingsRouter);
+app.use("/api/v1/users", usersRouter);
 
 const PORT = process.env.PORT ?? 4000;
 

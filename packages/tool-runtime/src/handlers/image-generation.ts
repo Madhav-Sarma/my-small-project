@@ -12,21 +12,41 @@ export class ImageGenerationHandler implements RuntimeHandler {
 
   constructor(private readonly gatewayUrl: string) {}
 
-  async execute(input: ToolInput, config: ToolConfig, _context: ExecutionContext): Promise<ToolOutput> {
+  private resolveEndpoint(context: ExecutionContext): { url: string; headers: Record<string, string> } {
+    const gatewayToken = process.env["INTERNAL_GATEWAY_TOKEN"];
+    if (!gatewayToken) {
+      throw new Error("INTERNAL_GATEWAY_TOKEN is required for AI Gateway communication");
+    }
+
+    return {
+      url: `${this.gatewayUrl}/v1/images/generations`,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${gatewayToken}`,
+        "x-user-id": context.userId,
+        "x-org-id": context.organizationId,
+      },
+    };
+  }
+
+  async execute(input: ToolInput, config: ToolConfig, context: ExecutionContext): Promise<ToolOutput> {
     const startTime = Date.now();
-    const model = input.model ?? config.defaultModel ?? "dall-e-3";
+    const model = input.model ?? "dall-e-3";
     const prompt = String(input.parameters.prompt ?? "");
     const size = String(input.parameters.size ?? input.overrides?.size ?? "1024x1024");
     const quality = String(input.parameters.quality ?? input.overrides?.quality ?? "standard");
 
-    const response = await fetch(`${this.gatewayUrl}/v1/images/generations`, {
+    const { url, headers } = this.resolveEndpoint(context);
+
+    const response = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ model, prompt, n: 1, size, quality }),
     });
 
     if (!response.ok) {
-      throw new Error(`AI Gateway error (${response.status}): ${response.statusText}`);
+      const body = await response.text().catch(() => response.statusText);
+      throw new Error(`Image generation error (${response.status}): ${body}`);
     }
 
     const data = (await response.json()) as {

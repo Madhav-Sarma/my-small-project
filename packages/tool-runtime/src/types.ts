@@ -18,7 +18,7 @@ export interface ToolConfig {
   toolId: string;
   name: string;
   handlerType: HandlerType;
-  defaultModel: string;
+  modelId: string; // ID of the AIModel to use
   inputSchema: Record<string, unknown>;
   outputType: OutputType;
   promptTemplate?: string;
