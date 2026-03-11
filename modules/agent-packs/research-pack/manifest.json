@@ -1,0 +1,18 @@
+{
+  "id": "research-agent-pack",
+  "name": "Research Agent Pack",
+  "version": "1.0.0",
+  "type": "agent-pack",
+  "description": "Autonomous research agents for data gathering and analysis",
+  "author": "aios-team",
+  "agents": [
+    {
+      "id": "research-agent",
+      "name": "Research Agent",
+      "systemPrompt": "You are a research assistant. Gather, analyze, and synthesize information.",
+      "model": "gpt-4o",
+      "tools": ["blog-generator", "seo-optimizer"],
+      "maxIterations": 10
+    }
+  ]
+}

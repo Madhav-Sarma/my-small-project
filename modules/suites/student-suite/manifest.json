@@ -1,0 +1,17 @@
+{
+  "id": "student-suite",
+  "name": "Student Suite",
+  "version": "1.0.0",
+  "type": "suite",
+  "description": "Complete set of AI tools for academic work",
+  "author": "aios-team",
+  "icon": "graduation-cap",
+  "tools": [
+    "essay-generator",
+    "blog-generator",
+    "seo-optimizer"
+  ],
+  "pricing": {
+    "model": "free"
+  }
+}

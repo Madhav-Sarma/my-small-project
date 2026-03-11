@@ -1,0 +1,34 @@
+{
+  "name": "aios-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI Operating System for Work — modular, plugin-based AI workspace platform",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "modules/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:migrate": "turbo run db:migrate --filter=@aios/database",
+    "db:seed": "turbo run db:seed --filter=@aios/database",
+    "clean": "turbo run clean",
+    "typecheck": "turbo run typecheck"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0",
+    "typescript": "^5.5.0",
+    "prettier": "^3.3.0",
+    "eslint": "^9.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "packageManager": "npm@10.9.2"
+}

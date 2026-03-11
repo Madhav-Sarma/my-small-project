@@ -1,0 +1,1077 @@
+// ─────────────────────────────────────────────────────
+// AIOS Platform — Prisma Schema
+// Comprehensive normalized database for the AI OS
+// ─────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════
+// USERS
+// ═══════════════════════════════════════════════════════
+
+model User {
+  id         String   @id @default(uuid())
+  externalId String?  @unique @map("external_id") // Clerk / Auth0 ID
+  email      String   @unique
+  name       String
+  avatarUrl  String?  @map("avatar_url")
+  preferences Json    @default("{}")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  organizationMemberships OrganizationMember[]
+  workspaceMemberships    WorkspaceMember[]
+  documents               Document[]
+  files                   File[]
+  creditTransactions      CreditTransaction[]
+  usageLogs               UsageLog[]
+  agentExecutionLogs      AgentExecutionLog[]
+  marketplaceReviews      MarketplaceReview[]
+
+  @@map("users")
+}
+
+// ═══════════════════════════════════════════════════════
+// ORGANIZATIONS (org-first architecture)
+// ═══════════════════════════════════════════════════════
+
+model Organization {
+  id               String   @id @default(uuid())
+  name             String
+  slug             String   @unique
+  logoUrl          String?  @map("logo_url")
+  stripeCustomerId String?  @map("stripe_customer_id")
+  isSolo           Boolean  @default(false) @map("is_solo")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  members       OrganizationMember[]
+  wallet        OrganizationWallet?
+  subscription  OrganizationSubscription?
+  workspaces    Workspace[]
+  usageLogs     OrganizationUsageLog[]
+  creditWallet  CreditWallet?
+  creditTxns    CreditTransaction[]
+  subscriptions Subscription[]
+  billingUsage  UsageLog[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  userId         String   @map("user_id")
+  role           OrgRole  @default(member)
+  joinedAt       DateTime @default(now()) @map("joined_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@unique([organizationId, userId])
+  @@map("organization_members")
+}
+
+enum OrgRole {
+  owner
+  admin
+  member
+}
+
+model OrganizationWallet {
+  id                  String   @id @default(uuid())
+  organizationId      String   @unique @map("organization_id")
+  creditBalance       Decimal  @default(0) @map("credit_balance") @db.Decimal(12, 2)
+  lifetimeCreditsUsed Decimal  @default(0) @map("lifetime_credits_used") @db.Decimal(14, 2)
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("organization_wallets")
+}
+
+model OrganizationSubscription {
+  id                   String             @id @default(uuid())
+  organizationId       String             @unique @map("organization_id")
+  tier                 SubscriptionTier   @default(free)
+  status               SubscriptionStatus @default(active)
+  stripeSubscriptionId String?            @map("stripe_subscription_id")
+  monthlyCredits       Int                @default(100) @map("monthly_credits")
+  currentPeriodStart   DateTime?          @map("current_period_start")
+  currentPeriodEnd     DateTime?          @map("current_period_end")
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("organization_subscriptions")
+}
+
+enum SubscriptionTier {
+  free
+  pro
+  enterprise
+}
+
+enum SubscriptionStatus {
+  active
+  past_due
+  canceled
+  trialing
+}
+
+model OrganizationUsageLog {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  userId         String?  @map("user_id")
+  resourceType   String   @map("resource_type") // tool, agent, workflow
+  resourceId     String?  @map("resource_id")
+  creditsUsed    Decimal  @map("credits_used") @db.Decimal(10, 4)
+  metadata       Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("organization_usage_logs")
+}
+
+// ═══════════════════════════════════════════════════════
+// WORKSPACES
+// ═══════════════════════════════════════════════════════
+
+model Workspace {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  name           String
+  slug           String
+  description    String?
+  settings       Json     @default("{}")
+  theme          String   @default("ai-dark")
+  createdById    String?  @map("created_by_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization        Organization          @relation(fields: [organizationId], references: [id])
+  members             WorkspaceMember[]
+  documents           Document[]
+  files               File[]
+  toolInstallations   ToolInstallation[]
+  suiteInstallations  SuiteInstallation[]
+  packInstallations   AgentPackInstallation[]
+  connectorInstalls   ConnectorInstallation[]
+  appInstallations    AppInstallation[]
+  workflows           Workflow[]
+  codeProjects        CodeProject[]
+  images              Image[]
+
+  @@unique([organizationId, slug])
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  userId      String   @map("user_id")
+  role        String   @default("member")
+  joinedAt    DateTime @default(now()) @map("joined_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([workspaceId, userId])
+  @@map("workspace_members")
+}
+
+model File {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  name        String
+  path        String
+  mimeType    String?  @map("mime_type")
+  sizeBytes   BigInt?  @map("size_bytes")
+  storageUrl  String?  @map("storage_url")
+  parentId    String?  @map("parent_id")
+  isFolder    Boolean  @default(false) @map("is_folder")
+  createdById String?  @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  createdBy User?     @relation(fields: [createdById], references: [id])
+  parent    File?     @relation("FileTree", fields: [parentId], references: [id])
+  children  File[]    @relation("FileTree")
+
+  @@map("files")
+}
+
+model Document {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  title       String
+  content     String?  @db.Text // TipTap JSON
+  format      String   @default("tiptap")
+  createdById String?  @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  createdBy User?     @relation(fields: [createdById], references: [id])
+
+  @@map("documents")
+}
+
+// ═══════════════════════════════════════════════════════
+// TOOLS
+// ═══════════════════════════════════════════════════════
+
+model Tool {
+  id                 String      @id @default(uuid())
+  slug               String      @unique
+  name               String
+  description        String?
+  category           String?
+  iconUrl            String?     @map("icon_url")
+  handlerType        HandlerType @map("handler_type")
+  defaultModel       String?     @map("default_model")
+  inputSchema        Json        @map("input_schema")
+  outputType         OutputType  @map("output_type")
+  promptTemplate     String?     @map("prompt_template") @db.Text
+  pricingCredits     Decimal     @default(10) @map("pricing_credits") @db.Decimal(8, 2)
+  suitePricingCredits Decimal?   @default(7) @map("suite_pricing_credits") @db.Decimal(8, 2)
+  apiProvider        String?     @map("api_provider")
+  permissions        Json        @default("[]")
+  status             ToolStatus  @default(published)
+  isBuiltIn          Boolean     @default(false) @map("is_built_in")
+  version            String      @default("1.0.0")
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt @map("updated_at")
+
+  versions           ToolVersion[]
+  installations      ToolInstallation[]
+  templates          ToolTemplate[]
+  suiteTools         SuiteTool[]
+  agentTools         AgentTool[]
+  packTools          PackTool[]
+  toolPricings       ToolPricing[]
+  executionJobs      ToolExecutionJob[]
+
+  @@map("tools")
+}
+
+enum HandlerType {
+  text_generation
+  image_generation
+  video_generation
+  code_generation
+  data_analysis
+  api_connector
+  workflow_execution
+}
+
+enum OutputType {
+  text_document
+  code_project
+  editable_image
+  raw_json
+  file_download
+}
+
+enum ToolStatus {
+  draft
+  published
+  deprecated
+}
+
+model ToolVersion {
+  id             String   @id @default(uuid())
+  toolId         String   @map("tool_id")
+  version        String
+  changelog      String?  @db.Text
+  inputSchema    Json?    @map("input_schema")
+  promptTemplate String?  @map("prompt_template") @db.Text
+  publishedAt    DateTime @default(now()) @map("published_at")
+
+  tool Tool @relation(fields: [toolId], references: [id])
+
+  @@map("tool_versions")
+}
+
+model ToolInstallation {
+  id            String   @id @default(uuid())
+  workspaceId   String   @map("workspace_id")
+  toolId        String   @map("tool_id")
+  configuration Json     @default("{}")
+  installedAt   DateTime @default(now()) @map("installed_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  tool      Tool      @relation(fields: [toolId], references: [id])
+
+  @@unique([workspaceId, toolId])
+  @@map("tool_installations")
+}
+
+model ToolTemplate {
+  id        String   @id @default(uuid())
+  toolId    String   @map("tool_id")
+  name      String
+  template  String   @db.Text
+  variables Json     @default("[]")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tool Tool @relation(fields: [toolId], references: [id])
+
+  @@map("tool_templates")
+}
+
+// ═══════════════════════════════════════════════════════
+// SUITES
+// ═══════════════════════════════════════════════════════
+
+model Suite {
+  id             String   @id @default(uuid())
+  slug           String   @unique
+  name           String
+  description    String?
+  category       String?
+  iconUrl        String?  @map("icon_url")
+  monthlyCredits Decimal? @map("monthly_credits") @db.Decimal(10, 2)
+  monthlyPrice   Decimal? @map("monthly_price") @db.Decimal(8, 2)
+  isCustom       Boolean  @default(false) @map("is_custom")
+  createdById    String?  @map("created_by_id")
+  status         String   @default("published")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  tools          SuiteTool[]
+  installations  SuiteInstallation[]
+  pricingTiers   SuitePricing[]
+
+  @@map("suites")
+}
+
+model SuiteTool {
+  id      String   @id @default(uuid())
+  suiteId String   @map("suite_id")
+  toolId  String   @map("tool_id")
+  order   Int      @default(0)
+  addedAt DateTime @default(now()) @map("added_at")
+
+  suite Suite @relation(fields: [suiteId], references: [id])
+  tool  Tool  @relation(fields: [toolId], references: [id])
+
+  @@unique([suiteId, toolId])
+  @@map("suite_tools")
+}
+
+model SuiteInstallation {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  suiteId     String   @map("suite_id")
+  installedAt DateTime @default(now()) @map("installed_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  suite     Suite     @relation(fields: [suiteId], references: [id])
+
+  @@unique([workspaceId, suiteId])
+  @@map("suite_installations")
+}
+
+model SuitePricing {
+  id              String   @id @default(uuid())
+  suiteId         String   @map("suite_id")
+  tier            String
+  monthlyPrice    Decimal  @map("monthly_price") @db.Decimal(8, 2)
+  creditsIncluded Decimal? @map("credits_included") @db.Decimal(10, 2)
+  features        Json     @default("[]")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  suite Suite @relation(fields: [suiteId], references: [id])
+
+  @@map("suite_pricing")
+}
+
+// ═══════════════════════════════════════════════════════
+// AGENTS
+// ═══════════════════════════════════════════════════════
+
+model Agent {
+  id            String      @id @default(uuid())
+  slug          String      @unique
+  name          String
+  description   String?
+  goal          String?     @db.Text
+  systemPrompt  String?     @map("system_prompt") @db.Text
+  model         String      @default("gpt-4")
+  memoryEnabled Boolean     @default(true) @map("memory_enabled")
+  maxIterations Int         @default(10) @map("max_iterations")
+  schedule      String?     // cron expression
+  toolAccess    Json        @default("[]") @map("tool_access")
+  workflowId    String?     @map("workflow_id")
+  permissions   Json        @default("[]")
+  status        AgentStatus @default(idle)
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  tools          AgentTool[]
+  memory         AgentMemory[]
+  packAgents     PackAgent[]
+  executionLogs  AgentExecutionLog[]
+
+  @@map("agents")
+}
+
+enum AgentStatus {
+  idle
+  running
+  paused
+  completed
+  failed
+}
+
+model AgentTool {
+  id      String   @id @default(uuid())
+  agentId String   @map("agent_id")
+  toolId  String   @map("tool_id")
+  addedAt DateTime @default(now()) @map("added_at")
+
+  agent Agent @relation(fields: [agentId], references: [id])
+  tool  Tool  @relation(fields: [toolId], references: [id])
+
+  @@unique([agentId, toolId])
+  @@map("agent_tools")
+}
+
+model AgentMemory {
+  id         String   @id @default(uuid())
+  agentId    String   @map("agent_id")
+  key        String
+  value      String   @db.Text
+  memoryType String   @default("short_term") @map("memory_type")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  agent Agent @relation(fields: [agentId], references: [id])
+
+  @@map("agent_memory")
+}
+
+// ── Agent Packs ──────────────────────────────────────
+
+model AgentPack {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  name        String
+  description String?
+  category    String?
+  iconUrl     String?  @map("icon_url")
+  version     String   @default("1.0.0")
+  status      String   @default("published")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  agents        PackAgent[]
+  tools         PackTool[]
+  installations AgentPackInstallation[]
+
+  @@map("agent_packs")
+}
+
+model PackAgent {
+  id      String @id @default(uuid())
+  packId  String @map("pack_id")
+  agentId String @map("agent_id")
+  order   Int    @default(0)
+
+  pack  AgentPack @relation(fields: [packId], references: [id])
+  agent Agent     @relation(fields: [agentId], references: [id])
+
+  @@unique([packId, agentId])
+  @@map("pack_agents")
+}
+
+model PackTool {
+  id     String @id @default(uuid())
+  packId String @map("pack_id")
+  toolId String @map("tool_id")
+
+  pack AgentPack @relation(fields: [packId], references: [id])
+  tool Tool      @relation(fields: [toolId], references: [id])
+
+  @@unique([packId, toolId])
+  @@map("pack_tools")
+}
+
+model AgentPackInstallation {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  packId      String   @map("pack_id")
+  installedAt DateTime @default(now()) @map("installed_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  pack      AgentPack @relation(fields: [packId], references: [id])
+
+  @@unique([workspaceId, packId])
+  @@map("agent_pack_installations")
+}
+
+model AgentExecutionLog {
+  id          String      @id @default(uuid())
+  agentId     String      @map("agent_id")
+  workspaceId String?     @map("workspace_id")
+  userId      String?     @map("user_id")
+  status      AgentStatus
+  iterations  Int?
+  input       String?     @db.Text
+  output      String?     @db.Text
+  tokensUsed  Int?        @map("tokens_used")
+  creditsUsed Decimal?    @map("credits_used") @db.Decimal(10, 4)
+  startedAt   DateTime    @default(now()) @map("started_at")
+  completedAt DateTime?   @map("completed_at")
+
+  agent Agent @relation(fields: [agentId], references: [id])
+  user  User? @relation(fields: [userId], references: [id])
+
+  @@map("agent_execution_logs")
+}
+
+// ═══════════════════════════════════════════════════════
+// WORKFLOWS
+// ═══════════════════════════════════════════════════════
+
+model Workflow {
+  id          String         @id @default(uuid())
+  workspaceId String         @map("workspace_id")
+  name        String
+  description String?
+  status      WorkflowStatus @default(draft)
+  triggerType String?        @map("trigger_type") // manual, schedule, webhook, event
+  schedule    String?
+  createdById String?        @map("created_by_id")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  workspace  Workspace           @relation(fields: [workspaceId], references: [id])
+  nodes      WorkflowNode[]
+  edges      WorkflowEdge[]
+  executions WorkflowExecution[]
+
+  @@map("workflows")
+}
+
+enum WorkflowStatus {
+  draft
+  active
+  paused
+  archived
+}
+
+model WorkflowNode {
+  id            String           @id @default(uuid())
+  workflowId    String           @map("workflow_id")
+  nodeType      WorkflowNodeType @map("node_type")
+  label         String?
+  configuration Json             @default("{}")
+  positionX     Float            @default(0) @map("position_x")
+  positionY     Float            @default(0) @map("position_y")
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  workflow      Workflow              @relation(fields: [workflowId], references: [id])
+  outgoingEdges WorkflowEdge[]        @relation("SourceNode")
+  incomingEdges WorkflowEdge[]        @relation("TargetNode")
+  nodeExecs     WorkflowNodeExecution[]
+
+  @@map("workflow_nodes")
+}
+
+enum WorkflowNodeType {
+  trigger
+  ai_tool
+  api_connector
+  logic_condition
+  agent_trigger
+  data_transformer
+  output
+}
+
+model WorkflowEdge {
+  id           String  @id @default(uuid())
+  workflowId   String  @map("workflow_id")
+  sourceNodeId String  @map("source_node_id")
+  targetNodeId String  @map("target_node_id")
+  condition    Json?
+  label        String?
+
+  workflow   Workflow     @relation(fields: [workflowId], references: [id])
+  sourceNode WorkflowNode @relation("SourceNode", fields: [sourceNodeId], references: [id])
+  targetNode WorkflowNode @relation("TargetNode", fields: [targetNodeId], references: [id])
+
+  @@map("workflow_edges")
+}
+
+model WorkflowExecution {
+  id          String          @id @default(uuid())
+  workflowId  String          @map("workflow_id")
+  status      ExecutionStatus @default(pending)
+  triggerData Json?           @map("trigger_data")
+  result      Json?
+  startedAt   DateTime        @default(now()) @map("started_at")
+  completedAt DateTime?       @map("completed_at")
+
+  workflow  Workflow                @relation(fields: [workflowId], references: [id])
+  nodeExecs WorkflowNodeExecution[]
+
+  @@map("workflow_executions")
+}
+
+enum ExecutionStatus {
+  pending
+  running
+  completed
+  failed
+}
+
+model WorkflowNodeExecution {
+  id          String          @id @default(uuid())
+  executionId String          @map("execution_id")
+  nodeId      String          @map("node_id")
+  status      ExecutionStatus
+  input       Json?
+  output      Json?
+  startedAt   DateTime        @default(now()) @map("started_at")
+  completedAt DateTime?       @map("completed_at")
+
+  execution WorkflowExecution @relation(fields: [executionId], references: [id])
+  node      WorkflowNode      @relation(fields: [nodeId], references: [id])
+
+  @@map("workflow_node_executions")
+}
+
+// ═══════════════════════════════════════════════════════
+// CONNECTORS (MCP)
+// ═══════════════════════════════════════════════════════
+
+model Connector {
+  id               String            @id @default(uuid())
+  slug             String            @unique
+  name             String
+  description      String?
+  iconUrl          String?           @map("icon_url")
+  authType         ConnectorAuthType @map("auth_type")
+  baseUrl          String?           @map("base_url")
+  permissions      Json              @default("[]")
+  rateLimitPerMin  Int               @default(60) @map("rate_limit_per_min")
+  version          String            @default("1.0.0")
+  status           String            @default("published")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  actions       ConnectorAction[]
+  events        ConnectorEvent[]
+  installations ConnectorInstallation[]
+
+  @@map("connectors")
+}
+
+enum ConnectorAuthType {
+  oauth2
+  api_key
+  bearer
+  basic
+  none
+}
+
+model ConnectorAction {
+  id           String   @id @default(uuid())
+  connectorId  String   @map("connector_id")
+  name         String
+  slug         String
+  description  String?
+  method       String   // GET, POST, etc.
+  path         String
+  inputSchema  Json     @default("{}") @map("input_schema")
+  outputSchema Json     @default("{}") @map("output_schema")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  connector Connector @relation(fields: [connectorId], references: [id])
+
+  @@map("connector_actions")
+}
+
+model ConnectorEvent {
+  id            String   @id @default(uuid())
+  connectorId   String   @map("connector_id")
+  name          String
+  slug          String
+  description   String?
+  payloadSchema Json     @default("{}") @map("payload_schema")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  connector Connector @relation(fields: [connectorId], references: [id])
+
+  @@map("connector_events")
+}
+
+model ConnectorInstallation {
+  id            String   @id @default(uuid())
+  workspaceId   String   @map("workspace_id")
+  connectorId   String   @map("connector_id")
+  credentials   String?  @db.Text // encrypted
+  configuration Json     @default("{}")
+  installedAt   DateTime @default(now()) @map("installed_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  connector Connector @relation(fields: [connectorId], references: [id])
+
+  @@unique([workspaceId, connectorId])
+  @@map("connector_installations")
+}
+
+// ═══════════════════════════════════════════════════════
+// APPS
+// ═══════════════════════════════════════════════════════
+
+model App {
+  id             String   @id @default(uuid())
+  slug           String   @unique
+  name           String
+  description    String?
+  iconUrl        String?  @map("icon_url")
+  appType        String   @map("app_type") // docs, ide, paint, terminal, custom
+  entryComponent String?  @map("entry_component")
+  permissions    Json     @default("[]")
+  isBuiltIn      Boolean  @default(false) @map("is_built_in")
+  version        String   @default("1.0.0")
+  status         String   @default("published")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  installations AppInstallation[]
+
+  @@map("apps")
+}
+
+model AppInstallation {
+  id            String   @id @default(uuid())
+  workspaceId   String   @map("workspace_id")
+  appId         String   @map("app_id")
+  configuration Json     @default("{}")
+  installedAt   DateTime @default(now()) @map("installed_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  app       App       @relation(fields: [appId], references: [id])
+
+  @@unique([workspaceId, appId])
+  @@map("app_installations")
+}
+
+// ═══════════════════════════════════════════════════════
+// MARKETPLACE
+// ═══════════════════════════════════════════════════════
+
+model MarketplaceListing {
+  id              String              @id @default(uuid())
+  itemType        MarketplaceItemType @map("item_type")
+  itemId          String              @map("item_id")
+  publisherId     String              @map("publisher_id")
+  title           String
+  description     String?
+  longDescription String?             @map("long_description") @db.Text
+  iconUrl         String?             @map("icon_url")
+  screenshots     Json                @default("[]")
+  category        String?
+  tags            Json                @default("[]")
+  version         String
+  creditsPerUse   Decimal?            @map("credits_per_use") @db.Decimal(8, 2)
+  commissionRate  Decimal             @default(0.20) @map("commission_rate") @db.Decimal(4, 2)
+  totalInstalls   Int                 @default(0) @map("total_installs")
+  avgRating       Decimal             @default(0) @map("avg_rating") @db.Decimal(3, 2)
+  status          String              @default("pending")
+  publishedAt     DateTime?           @map("published_at")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+
+  reviews MarketplaceReview[]
+
+  @@map("marketplace_listings")
+}
+
+enum MarketplaceItemType {
+  tool
+  suite
+  agent_pack
+  app
+  connector
+  workflow_template
+}
+
+model MarketplaceReview {
+  id        String   @id @default(uuid())
+  listingId String   @map("listing_id")
+  userId    String   @map("user_id")
+  rating    Int
+  comment   String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  listing MarketplaceListing @relation(fields: [listingId], references: [id])
+  user    User               @relation(fields: [userId], references: [id])
+
+  @@map("marketplace_reviews")
+}
+
+model MarketplaceCategory {
+  id          String  @id @default(uuid())
+  name        String
+  slug        String  @unique
+  description String?
+  iconUrl     String? @map("icon_url")
+  parentId    String? @map("parent_id")
+  order       Int     @default(0)
+
+  parent   MarketplaceCategory?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children MarketplaceCategory[] @relation("CategoryTree")
+
+  @@map("marketplace_categories")
+}
+
+// ═══════════════════════════════════════════════════════
+// BILLING & CREDITS
+// ═══════════════════════════════════════════════════════
+
+model CreditWallet {
+  id             String   @id @default(uuid())
+  organizationId String   @unique @map("organization_id")
+  balance        Decimal  @default(0) @db.Decimal(12, 2)
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("credit_wallets")
+}
+
+model CreditTransaction {
+  id             String          @id @default(uuid())
+  organizationId String          @map("organization_id")
+  userId         String?         @map("user_id")
+  type           TransactionType
+  amount         Decimal         @db.Decimal(10, 4)
+  balanceAfter   Decimal?        @map("balance_after") @db.Decimal(12, 2)
+  description    String?
+  referenceType  String?         @map("reference_type")
+  referenceId    String?         @map("reference_id")
+  metadata       Json            @default("{}")
+  createdAt      DateTime        @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User?        @relation(fields: [userId], references: [id])
+
+  @@map("credit_transactions")
+}
+
+enum TransactionType {
+  purchase
+  usage
+  refund
+  subscription_credit
+  bonus
+}
+
+model ToolPricing {
+  id                  String   @id @default(uuid())
+  toolId              String   @map("tool_id")
+  model               String
+  creditsPerExecution Decimal  @map("credits_per_execution") @db.Decimal(8, 4)
+  estimatedTokens     Int?     @map("estimated_tokens")
+  apiCostEstimate     Decimal? @map("api_cost_estimate") @db.Decimal(8, 6)
+  marginMultiplier    Decimal  @default(2.0) @map("margin_multiplier") @db.Decimal(4, 2)
+  effectiveFrom       DateTime @default(now()) @map("effective_from")
+
+  tool Tool @relation(fields: [toolId], references: [id])
+
+  @@map("tool_pricing")
+}
+
+model ApiCost {
+  id             String   @id @default(uuid())
+  provider       String
+  model          String
+  inputCostPer1k Decimal  @map("input_cost_per_1k") @db.Decimal(10, 6)
+  outputCostPer1k Decimal @map("output_cost_per_1k") @db.Decimal(10, 6)
+  effectiveFrom  DateTime @default(now()) @map("effective_from")
+
+  @@map("api_costs")
+}
+
+model UsageLog {
+  id              String   @id @default(uuid())
+  organizationId  String   @map("organization_id")
+  userId          String?  @map("user_id")
+  workspaceId     String?  @map("workspace_id")
+  resourceType    String   @map("resource_type")
+  resourceId      String?  @map("resource_id")
+  model           String?
+  provider        String?
+  inputTokens     Int?     @map("input_tokens")
+  outputTokens    Int?     @map("output_tokens")
+  creditsUsed     Decimal  @map("credits_used") @db.Decimal(10, 4)
+  apiCost         Decimal? @map("api_cost") @db.Decimal(10, 6)
+  executionTimeMs Int?     @map("execution_time_ms")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User?        @relation(fields: [userId], references: [id])
+
+  @@map("usage_logs")
+}
+
+model Subscription {
+  id                   String    @id @default(uuid())
+  organizationId       String    @map("organization_id")
+  suiteId              String?   @map("suite_id")
+  stripeSubscriptionId String?   @map("stripe_subscription_id")
+  status               String    @default("active")
+  currentPeriodStart   DateTime? @map("current_period_start")
+  currentPeriodEnd     DateTime? @map("current_period_end")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("subscriptions")
+}
+
+// ═══════════════════════════════════════════════════════
+// CONTENT (code projects, images)
+// ═══════════════════════════════════════════════════════
+
+model CodeProject {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  name        String
+  language    String?
+  framework   String?
+  createdById String?  @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace  @relation(fields: [workspaceId], references: [id])
+  files     CodeFile[]
+
+  @@map("code_projects")
+}
+
+model CodeFile {
+  id        String   @id @default(uuid())
+  projectId String   @map("project_id")
+  path      String
+  filename  String
+  content   String?  @db.Text
+  language  String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project CodeProject @relation(fields: [projectId], references: [id])
+
+  @@map("code_files")
+}
+
+model Image {
+  id                String   @id @default(uuid())
+  workspaceId       String   @map("workspace_id")
+  name              String
+  storageUrl        String   @map("storage_url")
+  mimeType          String   @default("image/png") @map("mime_type")
+  width             Int?
+  height            Int?
+  metadata          Json     @default("{}")
+  generatedByToolId String?  @map("generated_by_tool_id")
+  createdById       String?  @map("created_by_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  workspace Workspace      @relation(fields: [workspaceId], references: [id])
+  versions  ImageVersion[]
+
+  @@map("images")
+}
+
+model ImageVersion {
+  id              String   @id @default(uuid())
+  imageId         String   @map("image_id")
+  versionNumber   Int      @map("version_number")
+  storageUrl      String   @map("storage_url")
+  editDescription String?  @map("edit_description")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  image Image @relation(fields: [imageId], references: [id])
+
+  @@map("image_versions")
+}
+
+// ═══════════════════════════════════════════════════════
+// TOOL RUNTIME
+// ═══════════════════════════════════════════════════════
+
+model ToolRuntimeHandler {
+  id              String   @id @default(uuid())
+  handlerType     String   @unique @map("handler_type")
+  name            String
+  description     String?
+  executionModule String   @map("execution_module")
+  supportedModels Json     @default("[]") @map("supported_models")
+  configuration   Json     @default("{}")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("tool_runtime_handlers")
+}
+
+model ToolExecutionJob {
+  id              String    @id @default(uuid())
+  toolId          String    @map("tool_id")
+  userId          String    @map("user_id")
+  workspaceId     String    @map("workspace_id")
+  organizationId  String    @map("organization_id")
+  handlerType     String    @map("handler_type")
+  model           String?
+  input           Json
+  output          Json?
+  status          JobStatus @default(queued)
+  retryCount      Int       @default(0) @map("retry_count")
+  errorMessage    String?   @map("error_message") @db.Text
+  creditsCharged  Decimal?  @map("credits_charged") @db.Decimal(10, 4)
+  executionTimeMs Int?      @map("execution_time_ms")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+
+  tool Tool               @relation(fields: [toolId], references: [id])
+  logs ToolExecutionLog[]
+
+  @@map("tool_execution_jobs")
+}
+
+enum JobStatus {
+  queued
+  processing
+  completed
+  failed
+  retrying
+}
+
+model ToolExecutionLog {
+  id        String   @id @default(uuid())
+  jobId     String   @map("job_id")
+  level     String   // info, warn, error
+  message   String   @db.Text
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  job ToolExecutionJob @relation(fields: [jobId], references: [id])
+
+  @@map("tool_execution_logs")
+}

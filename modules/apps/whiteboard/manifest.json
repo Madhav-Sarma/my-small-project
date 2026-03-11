@@ -1,0 +1,11 @@
+{
+  "id": "whiteboard-app",
+  "name": "Whiteboard",
+  "version": "1.0.0",
+  "type": "app",
+  "description": "Collaborative whiteboard with AI-powered diagramming",
+  "author": "aios-community",
+  "icon": "layout",
+  "entryPoint": "./index.tsx",
+  "permissions": ["workspace:read", "workspace:write", "ai:generate"]
+}

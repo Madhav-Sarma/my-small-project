@@ -1,0 +1,26 @@
+{
+  "id": "blog-generator",
+  "name": "Blog Generator",
+  "version": "1.0.0",
+  "type": "tool",
+  "description": "AI-powered blog post generation with SEO optimization",
+  "author": "aios-team",
+  "icon": "pen-tool",
+  "category": "Content",
+  "handlerType": "PROMPT_CHAIN",
+  "outputType": "TEXT_DOCUMENT",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "topic": { "type": "string", "description": "Blog post topic" },
+      "tone": { "type": "string", "enum": ["professional", "casual", "academic"], "default": "professional" },
+      "length": { "type": "number", "description": "Target word count", "default": 800 }
+    },
+    "required": ["topic"]
+  },
+  "pricing": {
+    "creditsPerUse": 5,
+    "model": "per_use"
+  },
+  "entryPoint": "./handler.ts"
+}

@@ -1,0 +1,26 @@
+{
+  "name": "@aios/agent-runner",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@aios/database": "0.1.0",
+    "@aios/agent-core": "0.1.0",
+    "@aios/tool-runtime": "0.1.0",
+    "express": "^4.21.0",
+    "helmet": "^8.0.0",
+    "cors": "^2.8.5",
+    "bullmq": "^5.20.0",
+    "ioredis": "^5.4.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/cors": "^2.8.17",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  }
+}
