@@ -3,6 +3,23 @@ import type { ToolConfig, ToolInput, ExecutionContext } from "@aios/tool-runtime
 import { AgentMemoryStore } from "./memory.js";
 import type { AgentConfig, AgentStep, AgentResult, AgentMessage } from "./types.js";
 
+/** Minimal interface for the AI gateway client used by agents. */
+export interface AIGatewayClient {
+  chat(params: {
+    model: string;
+    messages: AgentMessage[];
+    tools?: string[];
+  }): Promise<{
+    content: string;
+    tokensUsed: number;
+    reasoning?: string;
+    toolCall?: { toolId: string; input: Record<string, unknown> };
+  }>;
+}
+
+/** Function that resolves a tool configuration by ID (e.g. from a database). */
+export type ToolConfigResolver = (toolId: string) => Promise<ToolConfig | null>;
+
 /**
  * Core agent runtime — iterative tool-using agent loop.
  *
@@ -19,6 +36,7 @@ export class AgentRuntime {
   constructor(
     private toolEngine: ToolRuntimeEngine,
     private aiGateway: AIGatewayClient,
+    private toolResolver?: ToolConfigResolver,
   ) {}
 
   async run(config: AgentConfig, userInput: string, context: ExecutionContext): Promise<AgentResult> {
@@ -112,22 +130,8 @@ export class AgentRuntime {
     };
   }
 
-  private async resolveToolConfig(_toolId: string): Promise<ToolConfig | null> {
-    // In production: fetch from database
+  private async resolveToolConfig(toolId: string): Promise<ToolConfig | null> {
+    if (this.toolResolver) return this.toolResolver(toolId);
     return null;
   }
-}
-
-/** Minimal interface for the AI gateway client used by agents. */
-interface AIGatewayClient {
-  chat(params: {
-    model: string;
-    messages: AgentMessage[];
-    tools?: string[];
-  }): Promise<{
-    content: string;
-    tokensUsed: number;
-    reasoning?: string;
-    toolCall?: { toolId: string; input: Record<string, unknown> };
-  }>;
 }

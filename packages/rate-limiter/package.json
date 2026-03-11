@@ -1,0 +1,17 @@
+{
+  "name": "@aios/rate-limiter",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ioredis": "^5.4.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.0",
+    "typescript": "^5.5.0"
+  }
+}

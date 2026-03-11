@@ -1,6 +1,11 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import Redis from "ioredis";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { authMiddleware, createRateLimiter } from "@aios/auth";
+import { scanAndRegisterModules } from "@aios/plugin-system";
 import { toolsRouter } from "./routes/tools.js";
 import { suitesRouter } from "./routes/suites.js";
 import { workspacesRouter } from "./routes/workspaces.js";
@@ -18,8 +23,21 @@ app.use(helmet());
 app.use(cors({ origin: process.env.WEB_ORIGIN ?? "http://localhost:3000", credentials: true }));
 app.use(express.json({ limit: "10mb" }));
 
-// Health check
+// --- Redis & rate limiting ---
+const REDIS_URL = process.env.REDIS_URL ?? "redis://localhost:6379";
+const redis = new Redis(REDIS_URL, { lazyConnect: true, maxRetriesPerRequest: 3 });
+
+const apiRateLimiter = createRateLimiter(redis, {
+  perUser:         { windowMs: 60_000, maxRequests: 120  },
+  perWorkspace:    { windowMs: 60_000, maxRequests: 600  },
+  perOrganization: { windowMs: 60_000, maxRequests: 1_200 },
+});
+
+// Health check (no auth / rate-limit)
 app.get("/health", (_req, res) => res.json({ status: "ok", service: "api" }));
+
+// Apply auth + rate limiting to all API routes
+app.use("/api/v1", authMiddleware, apiRateLimiter);
 
 // API routes
 app.use("/api/v1/tools", toolsRouter);
@@ -34,6 +52,20 @@ app.use("/api/v1/connectors", connectorsRouter);
 app.use("/api/v1/apps", appsRouter);
 
 const PORT = process.env.PORT ?? 4000;
-app.listen(PORT, () => {
-  console.log(`[API Server] Running on port ${PORT}`);
+
+async function start() {
+  // Scan and auto-register modules at startup
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const modulesDir = path.resolve(__dirname, "../../../modules");
+  const { result } = await scanAndRegisterModules(modulesDir);
+  console.log(`[API] Registered ${result.registered.length} modules from ${modulesDir}`);
+
+  app.listen(PORT, () => {
+    console.log(`[API Server] Running on port ${PORT}`);
+  });
+}
+
+start().catch((err) => {
+  console.error("[API] Failed to start:", err);
+  process.exit(1);
 });

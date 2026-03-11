@@ -9,6 +9,11 @@ export interface PluginManifest {
   author?: string;
   dependencies?: Record<string, string>;
   permissions?: string[];
+  /**
+   * Relative path to the module's entry-point file.
+   * Required for executable plugin types (tool, app, workflow_template).
+   * Declarative plugins (connector, suite, agent_pack) may omit this.
+   */
   entryPoint: string;
   ui?: {
     icon?: string;

@@ -1,6 +1,12 @@
 export { ToolRuntimeEngine } from "./engine.js";
 export { HandlerRegistry } from "./handler-registry.js";
-export { OutputRouter } from "./output-router.js";
+export { OutputRouter, type RouteTarget } from "./output-router.js";
+export {
+  createDefaultRegistry,
+  TextGenerationHandler,
+  ImageGenerationHandler,
+  CodeGenerationHandler,
+} from "./handlers/index.js";
 export type {
   ToolConfig,
   RuntimeHandler,

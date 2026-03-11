@@ -18,7 +18,9 @@
     "@aios/auth": "0.1.0",
     "@aios/utils": "0.1.0",
     "@aios/plugin-system": "0.1.0",
-    "@aios/tool-runtime": "0.1.0"
+    "@aios/tool-runtime": "0.1.0",
+    "@aios/rate-limiter": "0.1.0",
+    "@aios/credits": "0.1.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.0",

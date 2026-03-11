@@ -10,7 +10,7 @@ import type { OutputType } from "./types.js";
  *   file_download  → File download prompt
  */
 
-interface RouteTarget {
+export interface RouteTarget {
   component: string;
   props: Record<string, unknown>;
 }
